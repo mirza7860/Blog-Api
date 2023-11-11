@@ -17,7 +17,7 @@ const secretKey = process.env.JWT_SECRET;
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = 8000;
-app.use(cors({ credentials: true, origin: "http://localhost:5173" }));
+app.use(cors({ credentials: true}));
 app.use(express.json());
 app.use(cookieParser());
 app.use("/uploads", express.static("uploads"));
