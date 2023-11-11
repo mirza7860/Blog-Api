@@ -1,4 +1,4 @@
-# Open-Source-Blog-api
+# Blog-Api
 
 ## Technologies Used
 
