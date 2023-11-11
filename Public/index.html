@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog-API Endpoints</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1><a href="#" id="api-link" class="api-link">🚀 Blogging Platform API</a></h1>
+        <div id="current-url" class="current-url">Current URL: <span></span></div>
+        <div class="endpoint" data-endpoint="/register">
+            <h2>POST /register</h2>
+            <p>Register a new user.</p>
+        </div>
+        <div class="endpoint" data-endpoint="/login">
+            <h2>POST /login</h2>
+            <p>Login and receive a JWT token.</p>
+        </div>
+        <div class="endpoint" data-endpoint="/profile">
+            <h2>GET /profile</h2>
+            <p>Get user profile information.</p>
+        </div>
+        <div class="endpoint" data-endpoint="/logout">
+            <h2>POST /logout</h2>
+            <p>Logout and clear the token.</p>
+        </div>
+        <div class="endpoint" data-endpoint="/post">
+            <h2>POST /post</h2>
+            <p>Create a new blog post.</p>
+        </div>
+        <div class="endpoint" data-endpoint="/post">
+            <h2>GET /post</h2>
+            <p>Get a list of latest blog posts.</p>
+        </div>
+        <div class="endpoint" data-endpoint="/post/:id">
+            <h2>GET /post/:id</h2>
+            <p>Get a specific blog post by ID.</p>
+        </div>
+        <div class="endpoint" data-endpoint="/post">
+            <h2>PUT /post</h2>
+            <p>Update a blog post.</p>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+ <script type="module" src="./script.js"></script>
+ </html>
