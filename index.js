@@ -18,7 +18,7 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = 8000;
 app.use(cors({
-  origin: process.env.CLIENT_URL', 
+  origin: process.env.CLIENT_URL, 
   credentials: true,
 }));
 app.use(express.json());
