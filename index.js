@@ -7,53 +7,24 @@ import mongoose from "mongoose";
 import User from "./models/User.js";
 import Blog from "./models/Blog.js";
 import cookieParser from "cookie-parser";
-import AWS from "aws-sdk";
-import { v4 as uuidv4 } from 'uuid';
+import multer from "multer";
+import fs from "fs";
+import url, { fileURLToPath } from "url";
 import path from "path";
-
 dotenv.config();
-
-AWS.config.update({
-  region: process.env.AWS_REGION,
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  sessionToken: process.env.AWS_SESSION_TOKEN,
-});
-
-const s3 = new AWS.S3();
-
-const s3BucketName = process.env.S3_BUCKET_NAME;
-const s3BaseUrl = process.env.S3_BASE_URL;
-
+const uploads = multer({ dest: "uploads/" });
 const secretKey = process.env.JWT_SECRET;
-const __dirname = path.resolve();
-
+const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const port = process.env.PORT || 8000;
-
-app.use(
-  cors({
-    credentials: true,
-    origin: "https://myblog-client.onrender.com",
-  })
-);
-app.use((req, res, next) => {
-  const allowedOrigins = ["https://myblog-client.onrender.com"]; // Add your allowed origins
-
-  const origin = req.headers.origin;
-
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", allowedOrigins[0]);
-  }
-
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-
-  next();
-});
+const port = 8000;
+app.use(cors({
+  origin: process.env.CLIENT_URL, 
+  credentials: true,
+}));
 app.use(express.json());
 app.use(cookieParser());
-app.use("/", express.static(path.join(__dirname, "./Public")));
+app.use("/uploads", express.static("uploads"));
+app.use("/",express.static(path.join(__dirname,"./Public")));
 app.post("/register", async (req, res) => {
   const { Username, Password } = req.body;
   const salt = await bcrypt.genSalt(10);
@@ -78,9 +49,7 @@ app.post("/login", async (req, res) => {
   const token = jwt.sign({ Username, id: user._id }, secretKey);
   try {
     if (isLoggedin) {
-      res.status(200).cookie("token", token, {sameSite: "none",
-          secure: true,
-          httpOnly: true,} ).json({ id: user._id, Username });
+      res.status(200).cookie("token", token).json({ id: user._id, Username });
     } else {
       res.status(401).json({ message: "Incorrect password" });
     }
@@ -101,114 +70,72 @@ app.get("/profile", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.cookie("token", "" , {sameSite: "none",
-          secure: true,
-          httpOnly: true,}  ).json("Thanks for visiting.");
+  res.cookie("token", "").json("Thanks for visiting.");
 });
-app.post("/post", async (req, res) => {
-  const { title, summary, content } = req.body;
+app.post("/post", uploads.single("file"), async (req, res) => {
+  const { originalname, path } = req.file;
+  const parts = originalname.split(".");
+  const ext = parts[parts.length - 1];
+  const newPath = path + "." + ext;
+  fs.renameSync(path, newPath);
   const { token } = req.cookies;
-
   jwt.verify(token, secretKey, {}, async (err, info) => {
     if (err) {
       res.status(401).json({ message: "Token is invalid or expired" });
     } else {
-      const file = req.file;
-      const fileName = `${uuidv4()}-${file.originalname}`;
-
-      const params = {
-        Bucket: s3BucketName,
-        Key: fileName,
-        Body: JSON.stringify({ title, summary, content }), // Store post data as JSON
-        ContentType: file.mimetype,
-      };
-
-      s3.upload(params, async (s3Err, data) => {
-        if (s3Err) {
-          res.status(500).json({ message: "Error uploading file to S3" });
-        } else {
-          const postBlog = await Blog.create({
-            title,
-            summary,
-            content,
-            cover: `${s3BaseUrl}/${fileName}`,
-            author: info.id,
-          });
-          res.json(postBlog);
-        }
+      const { title, summary, content } = req.body;
+      const postBlog = await Blog.create({
+        title: title,
+        summary: summary,
+        content: content,
+        cover: newPath,
+        author: info.id,
       });
+
+      res.json(postBlog);
     }
   });
 });
-
 app.get("/post", async (req, res) => {
   const blogs = await Blog.find()
     .populate("author", ["Username"])
     .sort({ createdAt: -1 })
     .limit(32);
-  
-  const blogsWithS3URLs = blogs.map(blog => ({
-    ...blog._doc,
-    cover: blog.cover.replace("uploads", s3BaseUrl),
-  }));
-
-  res.json(blogsWithS3URLs);
+  res.json(blogs);
 });
-
 app.get("/post/:id", async (req, res) => {
   const { id } = req.params;
   const postDoc = await Blog.findById(id).populate("author", ["Username"]);
-
-  // Update cover URL to use S3 URL
-  const postWithS3URL = {
-    ...postDoc._doc,
-    cover: postDoc.cover.replace("uploads", s3BaseUrl),
-  };
-
-  res.json(postWithS3URL);
+  res.json(postDoc);
 });
-
-app.put("/post", async (req, res) => {
+app.put("/post", uploads.single("file"), async (req, res) => {
+  let newPath = null;
+  if (req.file) {
+    const { originalname, path } = req.file;
+    const parts = originalname.split(".");
+    const ext = parts[parts.length - 1];
+    newPath = path + "." + ext;
+    fs.renameSync(path, newPath);
+  }
   const { token } = req.cookies;
-
   jwt.verify(token, secretKey, {}, async (err, info) => {
     if (err) {
       res.status(401).json({ message: "Token is invalid or expired" });
     } else {
       const { id, title, summary, content } = req.body;
       const postBlog = await Blog.findById(id);
-      console.log(postBlog)
-      const isAuthor = JSON.stringify(postBlog.author) === JSON.stringify(info.id);
-
+      const isAuthor =
+        JSON.stringify(postBlog.author) === JSON.stringify(info.id);
       if (!isAuthor) {
-        return res.status(400).json("You are not an authorized user");
+        return res.status(400).json("you are not a authorized user");
+        throw "invalid   author";
       }
-
-      let updatedCover = postBlog.cover;
-
-      if (req.file) {
-        const file = req.file;
-        const fileName = `${uuidv4()}-${file.originalname}`;
-
-        const params = {
-          Bucket: s3BucketName,
-          Key: fileName,
-          Body: JSON.stringify({ title, summary, content }), // Store updated post data as JSON
-          ContentType: file.mimetype,
-        };
-
-        await s3.upload(params).promise(); // Upload the new file to S3
-
-        updatedCover = `${s3BaseUrl}/${fileName}`; // Update cover URL
-      }
-
       await postBlog.updateOne({
         title,
         summary,
         content,
-        cover: updatedCover,
+        cover: newPath ? newPath : postBlog.cover,
       });
-
       res.json(postBlog);
     }
   });
