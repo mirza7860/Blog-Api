@@ -31,9 +31,14 @@ const __dirname = path.resolve();
 const app = express();
 const port = process.env.PORT || 8000;
 
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", true);
+  next();
+});
 app.use(cors({
   origin: "https://myblog-client.onrender.com",
   credentials: true,
+  exposedHeaders: ["set-cookie"],
 }));
 app.use(express.json());
 app.use(cookieParser());
