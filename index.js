@@ -32,7 +32,7 @@ const app = express();
 const port = process.env.PORT || 8000;
 
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: "https://myblog-client.onrender.com",
   credentials: true,
 }));
 app.use(express.json());
