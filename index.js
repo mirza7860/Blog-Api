@@ -62,7 +62,9 @@ app.post("/login", async (req, res) => {
   const token = jwt.sign({ Username, id: user._id }, secretKey);
   try {
     if (isLoggedin) {
-      res.status(200).cookie("token", token).json({ id: user._id, Username });
+      res.status(200).cookie("token", token, {sameSite: "none",
+          secure: true,
+          httpOnly: true,} ).json({ id: user._id, Username });
     } else {
       res.status(401).json({ message: "Incorrect password" });
     }
@@ -83,7 +85,9 @@ app.get("/profile", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  res.cookie("token", "").json("Thanks for visiting.");
+  res.cookie("token", "" , {sameSite: "none",
+          secure: true,
+          httpOnly: true,}  ).json("Thanks for visiting.");
 });
 app.post("/post", async (req, res) => {
   const { title, summary, content } = req.body;
