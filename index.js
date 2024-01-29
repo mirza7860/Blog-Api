@@ -161,6 +161,7 @@ app.put("/post", async (req, res) => {
     } else {
       const { id, title, summary, content } = req.body;
       const postBlog = await Blog.findById(id);
+      console.log(postBlog)
       const isAuthor = JSON.stringify(postBlog.author) === JSON.stringify(info.id);
 
       if (!isAuthor) {
